@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">     
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
-    <title>Lake Superior Water Temperature</title>
+    <title>Lake Superior Ice Cover</title>
     <script src="https://code.highcharts.com/highcharts.js"></script>
     <script src="https://code.highcharts.com/modules/exporting.js"></script>
     <script src="https://code.highcharts.com/modules/export-data.js"></script>
@@ -63,44 +63,33 @@
 </figure>
 <script>
 (async () => {
-    // Helper to standardize any dataset format
-    const processData = (data, label) => {
-        let entries = [];
-
-        if (Array.isArray(data)) {
-            // Case: data is a plain array
-            entries = data;
-        } else if (data && Array.isArray(data.results)) {
-            // Case: data has a .results array
-            entries = data.results;
-        } else {
-            console.error(`Unexpected format for ${label}:`, data);
+    const processIceData = (data, label) => {
+        if (!Array.isArray(data)) {
+            console.error(`Unexpected format in ${label}:`, data);
             return [];
         }
 
-        return entries.map(item => [
+        return data.map(item => [
             new Date(item.Dates).getTime(),
-            parseFloat(item["Surface Temp (C)"])
+            parseFloat(item["Ice Cover (%)"])
         ]);
     };
 
     try {
-        const [glarmData, glseaData, oisstData] = await Promise.all([
-            fetch('lsdata.json').then(r => r.json()),
-            fetch('glsea_obs_temp.json').then(r => r.json()),
-            fetch('oisst_obs_temp.json').then(r => r.json())
+        const [glarmIce, usnicIce] = await Promise.all([
+            fetch('glarm_ice_ls.json').then(r => r.json()),
+            fetch('usnic_cis_ice_ls.json').then(r => r.json())
         ]);
 
-        const glarmSeries = processData(glarmData, 'GLARM');
-        const glseaSeries = processData(glseaData, 'GLSEA');
-        const oisstSeries = processData(oisstData, 'OISST');
+        const glarmSeries = processIceData(glarmIce, 'GLARM Ice');
+        const usnicSeries = processIceData(usnicIce, 'USNIC/CIS Ice');
 
         Highcharts.chart('container', {
             chart: {
                 zooming: { type: 'x' }
             },
             title: {
-                text: 'Lake Superior Surface Water Temperature Over Time',
+                text: 'Lake Superior Ice Cover Over Time',
                 align: 'left'
             },
             subtitle: {
@@ -114,7 +103,8 @@
                 title: { text: 'Date' }
             },
             yAxis: {
-                title: { text: 'Surface Water Temperature (°C)' }
+                title: { text: 'Ice Cover (%)' },
+                max: 100 // ice cover is a percentage
             },
             legend: {
                 enabled: true
@@ -128,23 +118,18 @@
                 },
                 {
                     type: 'line',
-                    name: 'OISST [Observation]',
-                    data: oisstSeries,
+                    name: 'USNIC/CIS [Observation]',
+                    data: usnicSeries,
                     color: 'blue'
-                },
-                {
-                    type: 'line',
-                    name: 'GLSEA [Observation]',
-                    data: glseaSeries,
-                    color: 'red'
                 }
             ]
         });
     } catch (err) {
-        console.error("Error loading or processing data:", err);
+        console.error("Error loading or processing ice data:", err);
     }
 })();
 </script>
+
 
 
 </body>
